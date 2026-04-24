@@ -32,7 +32,7 @@ export const MovieDetailsPage = () => {
       try {
         setLoading(true)
         setError('')
-        const response = await tmdbService.movieDetails(id)
+        const response = await tmdbService.movieDetails(id, language)
         setMovie(response)
       } catch (err) {
         setError(err.message)
@@ -42,7 +42,7 @@ export const MovieDetailsPage = () => {
     }
 
     loadMovie()
-  }, [id])
+  }, [id, language])
 
   if (loading) {
     return <p className="mx-auto max-w-6xl px-4 py-10 text-slate-200">{t('loadingDetails')}</p>

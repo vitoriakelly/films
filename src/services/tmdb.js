@@ -1,4 +1,5 @@
 const API_BASE_URL = 'https://api.tvmaze.com'
+const TRANSLATE_BASE_URL = 'https://api.mymemory.translated.net/get'
 
 const request = async (endpoint, params = {}) => {
   const searchParams = new URLSearchParams(params)
@@ -34,6 +35,71 @@ const getNextDate = (daysFromToday = 1) => {
   return date.toISOString().slice(0, 10)
 }
 
+const MAX_TRANSLATE_QUERY_LENGTH = 450
+
+const splitTextForTranslation = (text, maxLength = MAX_TRANSLATE_QUERY_LENGTH) => {
+  const source = String(text ?? '').trim()
+  if (!source) return []
+  if (source.length <= maxLength) return [source]
+
+  const parts = []
+  let current = ''
+  const sentences = source.split(/(?<=[.!?])\s+/)
+
+  sentences.forEach((sentence) => {
+    if (sentence.length > maxLength) {
+      if (current) {
+        parts.push(current)
+        current = ''
+      }
+      let start = 0
+      while (start < sentence.length) {
+        parts.push(sentence.slice(start, start + maxLength))
+        start += maxLength
+      }
+      return
+    }
+
+    const candidate = current ? `${current} ${sentence}` : sentence
+    if (candidate.length <= maxLength) {
+      current = candidate
+      return
+    }
+
+    if (current) parts.push(current)
+    current = sentence
+  })
+
+  if (current) parts.push(current)
+  return parts
+}
+
+const translateChunk = async (chunk, target) => {
+  const params = new URLSearchParams({ q: chunk, langpair: `en|${target}` })
+  const response = await fetch(`${TRANSLATE_BASE_URL}?${params.toString()}`)
+  if (!response.ok) return chunk
+  const translated = await response.json()
+  const textResult = translated?.responseData?.translatedText?.trim()
+  return textResult || chunk
+}
+
+const translateText = async (text, language) => {
+  const sourceText = String(text ?? '').trim()
+  if (!sourceText || language === 'en') return sourceText
+
+  const targetByLanguage = { pt: 'pt', es: 'es' }
+  const target = targetByLanguage[language]
+  if (!target) return sourceText
+
+  const chunks = splitTextForTranslation(sourceText)
+  if (chunks.length === 0) return sourceText
+
+  const translatedChunks = await Promise.all(
+    chunks.map((chunk) => translateChunk(chunk, target)),
+  )
+  return translatedChunks.join(' ').trim() || sourceText
+}
+
 export const tmdbService = {
   trending: async (page = 1) => {
     const response = await request('/shows', { page: Math.max(page - 1, 0) })
@@ -63,13 +129,19 @@ export const tmdbService = {
     const response = await request('/search/shows', { q: query })
     return { results: (response ?? []).map((item) => normalizeShow(item.show)) }
   },
-  movieDetails: async (id) => {
+  movieDetails: async (id, language = 'en') => {
     const [showResponse, castResponse] = await Promise.all([
       request(`/shows/${id}`),
       request(`/shows/${id}/cast`),
     ])
 
     const normalized = normalizeShow(showResponse)
+    let translatedOverview = normalized.overview
+    try {
+      translatedOverview = await translateText(normalized.overview, language)
+    } catch {
+      translatedOverview = normalized.overview
+    }
     const cast = (castResponse ?? []).map((item, index) => ({
       id: item.person?.id ?? index,
       name: item.person?.name ?? 'Nome indisponível',
@@ -78,6 +150,7 @@ export const tmdbService = {
 
     return {
       ...normalized,
+      overview: translatedOverview,
       credits: { cast },
       videos: { results: [] },
     }

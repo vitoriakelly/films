@@ -27,9 +27,70 @@ const InfiniteGrid = ({ movies }) => (
   </div>
 )
 
+const GENRE_TRANSLATIONS = {
+  pt: {
+    Action: 'Acao',
+    Adventure: 'Aventura',
+    Animation: 'Animacao',
+    Anime: 'Anime',
+    Children: 'Infantil',
+    Comedy: 'Comedia',
+    Crime: 'Crime',
+    Drama: 'Drama',
+    Family: 'Familia',
+    Fantasy: 'Fantasia',
+    Food: 'Culinaria',
+    History: 'Historia',
+    Horror: 'Terror',
+    Legal: 'Juridico',
+    Medical: 'Medico',
+    Music: 'Musica',
+    Mystery: 'Misterio',
+    Nature: 'Natureza',
+    Romance: 'Romance',
+    ScienceFiction: 'Ficcao cientifica',
+    Sports: 'Esportes',
+    Supernatural: 'Sobrenatural',
+    Thriller: 'Suspense',
+    Travel: 'Viagem',
+    War: 'Guerra',
+    Western: 'Faroeste',
+  },
+  es: {
+    Action: 'Accion',
+    Adventure: 'Aventura',
+    Animation: 'Animacion',
+    Anime: 'Anime',
+    Children: 'Infantil',
+    Comedy: 'Comedia',
+    Crime: 'Crimen',
+    Drama: 'Drama',
+    Family: 'Familia',
+    Fantasy: 'Fantasia',
+    Food: 'Cocina',
+    History: 'Historia',
+    Horror: 'Terror',
+    Legal: 'Legal',
+    Medical: 'Medico',
+    Music: 'Musica',
+    Mystery: 'Misterio',
+    Nature: 'Naturaleza',
+    Romance: 'Romance',
+    ScienceFiction: 'Ciencia ficcion',
+    Sports: 'Deportes',
+    Supernatural: 'Sobrenatural',
+    Thriller: 'Suspenso',
+    Travel: 'Viajes',
+    War: 'Guerra',
+    Western: 'Oeste',
+  },
+}
+
+const normalizeGenreKey = (name) => String(name ?? '').replaceAll(/\s|-/g, '')
+
 export const HomePage = () => {
   const { favorites } = useFavorites()
-  const { t } = useLanguage()
+  const { t, language } = useLanguage()
   const { isLight } = useTheme()
   const [trending, setTrending] = useState([])
   const [upcoming, setUpcoming] = useState([])
@@ -41,6 +102,7 @@ export const HomePage = () => {
   const [searchResults, setSearchResults] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSearching, setIsSearching] = useState(false)
+  const [selectedGenre, setSelectedGenre] = useState('all')
   const [error, setError] = useState('')
   const debouncedSearch = useDebounce(searchValue)
   const loadMoreRef = useRef(null)
@@ -136,6 +198,37 @@ export const HomePage = () => {
     () => favorites.map((id) => knownMovies.get(id)).filter(Boolean),
     [favorites, knownMovies],
   )
+  const genreCandidates = useMemo(
+    () => [...trending, ...upcoming, ...popular],
+    [popular, trending, upcoming],
+  )
+  const topGenres = useMemo(() => {
+    const counts = new Map()
+    genreCandidates.forEach((movie) => {
+      ;(movie.genres ?? []).forEach((genre) => {
+        if (!genre?.name) return
+        counts.set(genre.name, (counts.get(genre.name) ?? 0) + 1)
+      })
+    })
+
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8)
+      .map(([genre]) => genre)
+  }, [genreCandidates])
+  const genreMovies = useMemo(() => {
+    if (selectedGenre === 'all') return popular
+    return genreCandidates.filter((movie) =>
+      (movie.genres ?? []).some((genre) => genre.name === selectedGenre),
+    )
+  }, [genreCandidates, popular, selectedGenre])
+  const genreLabel = (genreName) => {
+    if (language === 'en') return genreName
+    const byLanguage = GENRE_TRANSLATIONS[language] ?? {}
+    return byLanguage[normalizeGenreKey(genreName)] ?? genreName
+  }
+  const selectedGenreLabel =
+    selectedGenre === 'all' ? t('allGenres') : genreLabel(selectedGenre)
 
   const wrapperClass = isLight ? 'text-slate-900' : 'text-slate-100'
   const panelClass = isLight
@@ -205,6 +298,53 @@ export const HomePage = () => {
 
       {!hasSearch && !isLoading ? (
         <>
+          <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+            <SectionHeader
+              title={t('genresMenuTitle')}
+              description={t('genresMenuDescription')}
+            />
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedGenre('all')}
+                className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
+                  selectedGenre === 'all'
+                    ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                    : isLight
+                      ? 'border-slate-300 bg-white text-slate-700 hover:border-cyan-400'
+                      : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-cyan-400'
+                }`}
+              >
+                {t('allGenres')}
+              </button>
+              {topGenres.map((genreName) => (
+                <button
+                  key={genreName}
+                  type="button"
+                  onClick={() => setSelectedGenre(genreName)}
+                  className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
+                    selectedGenre === genreName
+                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                      : isLight
+                        ? 'border-slate-300 bg-white text-slate-700 hover:border-cyan-400'
+                        : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-cyan-400'
+                  }`}
+                >
+                  {genreLabel(genreName)}
+                </button>
+              ))}
+            </div>
+            <SectionHeader
+              title={
+                selectedGenre === 'all'
+                  ? t('genreSectionTitleAll')
+                  : t('genreSectionTitle', { genre: selectedGenreLabel })
+              }
+              description={t('genreMoviesCount', { count: genreMovies.length })}
+            />
+            <InfiniteGrid movies={genreMovies} />
+          </motion.section>
+
           {favoriteMovies.length > 0 ? (
             <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
               <SectionHeader
