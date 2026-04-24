@@ -1,5 +1,6 @@
 const API_BASE_URL = 'https://api.tvmaze.com'
 const TRANSLATE_BASE_URL = 'https://api.mymemory.translated.net/get'
+const overviewTranslationCache = new Map()
 
 const request = async (endpoint, params = {}) => {
   const searchParams = new URLSearchParams(params)
@@ -90,6 +91,10 @@ const translateText = async (text, language) => {
   const targetByLanguage = { pt: 'pt', es: 'es' }
   const target = targetByLanguage[language]
   if (!target) return sourceText
+  const cacheKey = `${language}::${sourceText}`
+  if (overviewTranslationCache.has(cacheKey)) {
+    return overviewTranslationCache.get(cacheKey)
+  }
 
   const chunks = splitTextForTranslation(sourceText)
   if (chunks.length === 0) return sourceText
@@ -97,7 +102,9 @@ const translateText = async (text, language) => {
   const translatedChunks = await Promise.all(
     chunks.map((chunk) => translateChunk(chunk, target)),
   )
-  return translatedChunks.join(' ').trim() || sourceText
+  const result = translatedChunks.join(' ').trim() || sourceText
+  overviewTranslationCache.set(cacheKey, result)
+  return result
 }
 
 export const tmdbService = {

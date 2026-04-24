@@ -7,6 +7,65 @@ import { useTheme } from '../hooks/useTheme'
 import { backdropUrl, imageUrl, tmdbService } from '../services/tmdb'
 
 const localeByLanguage = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' }
+const GENRE_TRANSLATIONS = {
+  pt: {
+    Action: 'Acao',
+    Adventure: 'Aventura',
+    Animation: 'Animacao',
+    Anime: 'Anime',
+    Children: 'Infantil',
+    Comedy: 'Comedia',
+    Crime: 'Crime',
+    Drama: 'Drama',
+    Family: 'Familia',
+    Fantasy: 'Fantasia',
+    Food: 'Culinaria',
+    History: 'Historia',
+    Horror: 'Terror',
+    Legal: 'Juridico',
+    Medical: 'Medico',
+    Music: 'Musica',
+    Mystery: 'Misterio',
+    Nature: 'Natureza',
+    Romance: 'Romance',
+    ScienceFiction: 'Ficcao cientifica',
+    Sports: 'Esportes',
+    Supernatural: 'Sobrenatural',
+    Thriller: 'Suspense',
+    Travel: 'Viagem',
+    War: 'Guerra',
+    Western: 'Faroeste',
+  },
+  es: {
+    Action: 'Accion',
+    Adventure: 'Aventura',
+    Animation: 'Animacion',
+    Anime: 'Anime',
+    Children: 'Infantil',
+    Comedy: 'Comedia',
+    Crime: 'Crimen',
+    Drama: 'Drama',
+    Family: 'Familia',
+    Fantasy: 'Fantasia',
+    Food: 'Cocina',
+    History: 'Historia',
+    Horror: 'Terror',
+    Legal: 'Legal',
+    Medical: 'Medico',
+    Music: 'Musica',
+    Mystery: 'Misterio',
+    Nature: 'Naturaleza',
+    Romance: 'Romance',
+    ScienceFiction: 'Ciencia ficcion',
+    Sports: 'Deportes',
+    Supernatural: 'Sobrenatural',
+    Thriller: 'Suspenso',
+    Travel: 'Viajes',
+    War: 'Guerra',
+    Western: 'Oeste',
+  },
+}
+const normalizeGenreKey = (name) => String(name ?? '').replaceAll(/\s|-/g, '')
 
 const movieFacts = (movie, locale, t) => {
   const releaseDate = movie.release_date
@@ -61,6 +120,11 @@ export const MovieDetailsPage = () => {
   const facts = movieFacts(movie, localeByLanguage[language] ?? 'pt-BR', t)
   const cast = movie.credits?.cast?.slice(0, 10) ?? []
   const favorite = isFavorite(movie.id)
+  const genreLabel = (genreName) => {
+    if (language === 'en') return genreName
+    const byLanguage = GENRE_TRANSLATIONS[language] ?? {}
+    return byLanguage[normalizeGenreKey(genreName)] ?? genreName
+  }
   const textClass = isLight ? 'text-slate-900' : 'text-slate-100'
   const cardClass = isLight ? 'border-slate-300 bg-white/90' : 'border-slate-700/70 bg-slate-900/70'
 
@@ -122,7 +186,7 @@ export const MovieDetailsPage = () => {
                   key={genre.id}
                   className="rounded-full border border-cyan-400/50 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-200"
                 >
-                  {genre.name}
+                  {genreLabel(genre.name)}
                 </span>
               ))}
             </div>
@@ -130,6 +194,11 @@ export const MovieDetailsPage = () => {
             <p className={`mt-5 leading-relaxed ${isLight ? 'text-slate-700' : 'text-slate-200'}`}>
               {movie.overview || t('noOverview')}
             </p>
+            {language === 'en' ? null : (
+              <p className={`mt-2 text-xs ${isLight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {t('overviewAutoTranslated')}
+              </p>
+            )}
 
             <div className="mt-5 flex flex-wrap gap-3">
               {movie.url ? (

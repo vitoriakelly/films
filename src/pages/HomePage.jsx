@@ -296,55 +296,57 @@ export const HomePage = () => {
         </motion.section>
       ) : null}
 
-      {!hasSearch && !isLoading ? (
-        <>
-          <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-            <SectionHeader
-              title={t('genresMenuTitle')}
-              description={t('genresMenuDescription')}
-            />
-            <div className="mb-4 flex flex-wrap gap-2">
+      {!isLoading ? (
+        <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+          <SectionHeader
+            title={t('genresMenuTitle')}
+            description={t('genresMenuDescription')}
+          />
+          <div className="mb-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setSelectedGenre('all')}
+              className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
+                selectedGenre === 'all'
+                  ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
+                  : isLight
+                    ? 'border-slate-300 bg-white text-slate-700 hover:border-cyan-400'
+                    : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-cyan-400'
+              }`}
+            >
+              {t('allGenres')}
+            </button>
+            {topGenres.map((genreName) => (
               <button
+                key={genreName}
                 type="button"
-                onClick={() => setSelectedGenre('all')}
+                onClick={() => setSelectedGenre(genreName)}
                 className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
-                  selectedGenre === 'all'
+                  selectedGenre === genreName
                     ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
                     : isLight
                       ? 'border-slate-300 bg-white text-slate-700 hover:border-cyan-400'
                       : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-cyan-400'
                 }`}
               >
-                {t('allGenres')}
+                {genreLabel(genreName)}
               </button>
-              {topGenres.map((genreName) => (
-                <button
-                  key={genreName}
-                  type="button"
-                  onClick={() => setSelectedGenre(genreName)}
-                  className={`rounded-full border px-3 py-1 text-sm font-semibold transition ${
-                    selectedGenre === genreName
-                      ? 'border-cyan-400 bg-cyan-500/20 text-cyan-200'
-                      : isLight
-                        ? 'border-slate-300 bg-white text-slate-700 hover:border-cyan-400'
-                        : 'border-slate-700 bg-slate-900/70 text-slate-200 hover:border-cyan-400'
-                  }`}
-                >
-                  {genreLabel(genreName)}
-                </button>
-              ))}
-            </div>
-            <SectionHeader
-              title={
-                selectedGenre === 'all'
-                  ? t('genreSectionTitleAll')
-                  : t('genreSectionTitle', { genre: selectedGenreLabel })
-              }
-              description={t('genreMoviesCount', { count: genreMovies.length })}
-            />
-            <InfiniteGrid movies={genreMovies} />
-          </motion.section>
+            ))}
+          </div>
+          <SectionHeader
+            title={
+              selectedGenre === 'all'
+                ? t('genreSectionTitleAll')
+                : t('genreSectionTitle', { genre: selectedGenreLabel })
+            }
+            description={t('genreMoviesCount', { count: genreMovies.length })}
+          />
+          <InfiniteGrid movies={genreMovies} />
+        </motion.section>
+      ) : null}
 
+      {!hasSearch && !isLoading ? (
+        <>
           {favoriteMovies.length > 0 ? (
             <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
               <SectionHeader
